@@ -6,7 +6,7 @@
 
 **`克隆软件仓库`** 
 ```
-git clone --depth=1 -b testing https://github.com/xxin83/steamos-waydroid-installer
+git clone --depth=1 -b main https://github.com/xxin83/steamos-waydroid-installer
 ```
 
 **`进入目录赋予权限、执行该脚本`** 
