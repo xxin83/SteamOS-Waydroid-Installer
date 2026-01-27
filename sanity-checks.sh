@@ -1,117 +1,107 @@
 #!/bin/bash
 
-# sanity check - are you running this in Desktop Mode or ssh / virtual tty session?
 xdpyinfo &> /dev/null
 if [ $? -eq 0 ]
 then
-	echo Script is running in Desktop Mode.
+	echo "脚本正在桌面模式运行。"
 else
- 	echo Script is NOT running in Desktop Mode.
-	echo Please run the script in Desktop Mode as mentioned in the README. Goodbye!
+ 	echo "脚本未在桌面模式运行。"
+	echo "请按照 README 的说明在桌面模式下运行脚本。再见！"
 	exit
 fi
 
-# sanity check - make sure this is running on at least SteamOS 3.7.x
 if awk "BEGIN {exit ! ($STEAMOS_VERSION >= $BASE_VERSION)}"
 then
-	echo SteamOS $STEAMOS_VERSION $STEAMOS_BRANCH detected. Proceed to the next step.
+	echo "检测到 SteamOS $STEAMOS_VERSION $STEAMOS_BRANCH。进入下一步。"
 else
-	echo SteamOS $STEAMOS_VERSION $STEAMOS_BRANCH detected. This is unsupported version.
-	echo Update SteamOS and make sure it is at least on SteamOS 3.7.x.
+	echo "检测到 SteamOS $STEAMOS_VERSION $STEAMOS_BRANCH。这是不受支持的版本。"
+	echo "请更新 SteamOS，确保其版本至少为 3.7.x。"
 	exit
 fi
 
-# sanity check - make sure the update channel is rel (stable) or beta
 if [ "$STEAMOS_BRANCH" == "rel" ] || [ "$STEAMOS_BRANCH" == "beta" ]
 then
-	echo SteamOS $STEAMOS_BRANCH branch detected. Proceed to the next step.
+	echo "检测到 SteamOS $STEAMOS_BRANCH 分支。进入下一步。"
 elif [ "$STEAMOS_BRANCH" == "main" ]
 then
-	zenity --question --title "SteamOS Waydroid Installer" --text \
-		"WARNING! SteamOS $STEAMOS_BRANCH branch detected. \
-		\n\nThe script has been tested to work with the STABLE or BETA branch of SteamOS. \
-		\nHowever the script may also work with the MAIN branch of SteamOS. \
-		\n\n\nDo you want to continue with the install?" --width 650 --height 75 &> /dev/null
+	zenity --question --title "SteamOS Waydroid 安装程序" --text \
+		"警告！检测到 SteamOS $STEAMOS_BRANCH 分支。 \
+		\n\n该脚本已在 SteamOS 的稳定版 (STABLE) 或测试版 (BETA) 分支上测试过。 \
+		\n但脚本也可能在主开发版 (MAIN) 分支上运行。 \
+		\n\n\n是否要继续安装？" --width 650 --height 75 &> /dev/null
 
 	if [ $? -eq 1 ]
 	then
-		echo User pressed NO. Exit immediately.
+		echo "用户按下否。立即退出。"
 		exit
 	else
-		echo User pressed YES. Continue with the script.
-		echo SteamOS $STEAMOS_BRANCH detected.
+		echo "用户按下是。继续运行脚本。"
+		echo "已检测到 SteamOS $STEAMOS_BRANCH。"
 	fi
 fi
 
-# sanity check - make sure there is enough free space in the home partition (at least 5GB)
-echo Checking if home partition has enough free space
-echo home partition has $FREE_HOME free space.
+echo "正在检查 home 分区是否有足够的空闲空间"
+echo "home 分区剩余 $FREE_HOME 空间。"
 if [ $FREE_HOME -ge 5000000 ]
 then
-	echo home partition has enough free space.
+	echo "home 分区空间充足。"
 else
-	echo Not enough space on the home partition!
-	echo Make sure that there is at least 5GB free space on the home partition!
+	echo "home 分区空间不足！"
+	echo "请确保 home 分区至少有 5GB 的空闲空间！"
 	exit
 fi
 
-# sanity check - is this a reinstall?
-# this sanity check will go away once the var trick is completed
 grep redfin /var/lib/waydroid/waydroid_base.prop &> /dev/null || grep PH7M_EU_5596 /var/lib/waydroid/waydroid_base.prop &> /dev/null
 if [ $? -eq 0 ]
 then
-	echo This seems to be a reinstall. var sanity check not needed.
+	echo "检测到重新安装。跳过 var 分区空间检测。"
 else
-	# sanity check - make sure there is enough free space in the var partition (at least 100MB)
-	echo Checking if var partition has enough free space
-	echo var partition has $FREE_VAR free space.
+	echo "正在检查 var 分区是否有足够的空闲空间"
+	echo "var 分区剩余 $FREE_VAR 空间。"
 	if [ $FREE_VAR -ge 100000 ]
 	then
-		echo var partition has enough free space.
+		echo "var 分区空间充足。"
 	else
-		echo Not enough space on the var partition!
-		echo Make sure that there is at least 100MB free space on the var partition!
+		echo "var 分区空间不足！"
+		echo "请确保 var 分区至少有 100MB 的空闲空间！"
 		exit
 	fi
 fi
 
-# sanity check - make sure sudo password is already set
 if [ "$(passwd --status $(whoami) | tr -s " " | cut -d " " -f 2)" == "P" ]
 then
-	read -s -p "Please enter current sudo password: " current_password ; echo
-	echo Checking if the sudo password is correct.
+	read -s -p "请输入当前的 sudo 密码: " current_password ; echo
+	echo "正在检查 sudo 密码是否正确。"
 	echo -e "$current_password\n" | sudo -S -k ls &> /dev/null
 
 	if [ $? -eq 0 ]
 	then
-		echo Sudo password is good!
+		echo "Sudo 密码正确！"
 	else
-		echo Sudo password is wrong! Re-run the script and make sure to enter the correct sudo password!
+		echo "Sudo 密码错误！请重新运行脚本并确保输入正确的 sudo 密码！"
 		exit
 	fi
 else
-	echo Sudo password is blank! Setup a sudo password first and then re-run script!
+	echo "Sudo 密码为空！请先设置 sudo 密码，然后重新运行脚本！"
 	passwd
 	exit
 fi
 
-# sanity check - is Decky Loader installed?
 systemctl is-active --quiet plugin_loader.service
 if [ $? -eq 0 ]
 then
-	echo Decky Loader detected! This may cause issues with the SteamOS Waydroid installer script!
-	echo Temporary disabling the Decky Loader plugin loader service.
+	echo "检测到 Decky Loader！这可能会对 Waydroid 安装脚本产生影响！"
+	echo "正在暂时禁用 Decky Loader 插件服务。"
 	echo -e "$current_password\n" | sudo -S systemctl stop plugin_loader.service
 
 	if [ $? -eq 0 ]
 	then
-		echo Decky Loader Plugin Loader service successfully disabled.
-		echo Once the script has finished installing Waydroid, the Decky Loader Plugin Loader service will be re-enabled.
-	  	echo You can also reboot the Steam Deck to re-activate the Decky Loader Plugin Loader service.
+		echo "Decky Loader 插件服务已成功禁用。"
+		echo "待 Waydroid 安装完成后，该服务将重新启用。"
+	  	echo "您也可以通过重启 Steam Deck 来重新激活 Decky Loader。"
 	else
-		echo Error ecountered when stopping the Decky Loader Plugin Loader service.
-		echo Exiting immediately.
+		echo "停止 Decky Loader 插件服务时出错。"
+		echo "立即退出。"
 		exit
 	fi
 fi
-
