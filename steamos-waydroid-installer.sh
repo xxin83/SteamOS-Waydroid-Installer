@@ -2,13 +2,12 @@
 
 clear
 
-echo SteamOS Waydroid Installer Script by ryanrudolf
-echo https://github.com/ryanrudolfoba/SteamOS-Waydroid-Installer
-echo YT - 10MinuteSteamDeckGamer
+echo "ryanrudolf 开发的 SteamOS Waydroid 安装脚本"
+echo "https://github.com/ryanrudolfoba/SteamOS-Waydroid-Installer"
+echo "YT - 10MinuteSteamDeckGamer"
 sleep 2
 
-# define variables here
-SCRIPT_VERSION_SHA=$(git rev-parse --short HEAD)
+SCRIPT_VERSION_SHA="爱折腾的老家伙汉化修改"
 STEAMOS_VERSION=$(cat /etc/os-release | grep -i version_id | cut -d "=" -f2 | cut -d "." -f1-2)
 BASE_VERSION=3.7
 STEAMOS_BRANCH=$(steamos-select-branch -c)
@@ -22,83 +21,67 @@ WAYDROID_SCRIPT_DIR=$(mktemp -d)/waydroid_script
 FREE_HOME=$(df /home --output=avail | tail -n1)
 FREE_VAR=$(df /var --output=avail | tail -n1)
 
-# android TV builds
-#ANDROID13_TV_IMG=https://github.com/supechicken/waydroid-androidtv-build/releases/download/20250913/lineage-20.0-20250913-UNOFFICIAL-WayDroidATV_x86_64.zip
-
 ANDROID13_TV_IMG=https://github.com/supechicken/waydroid-androidtv-build/releases/download/20250811/lineage-20.0-20250811-UNOFFICIAL-WayDroidATV_x86_64.zip
-
-# android TV hash
-#ANDROID13_TV_IMG_HASH=309e0692fed0ea5d6b130858553138521d2e8902754db93a2b5a3ca68ecb28e9
-
 ANDROID13_TV_IMG_HASH=0c6cb5f3ccc7edab105d800363c2fe6b457f77f793f04e3fddc6175c0665a2d4
 
-echo script version: $SCRIPT_VERSION_SHA
+echo "脚本版本: $SCRIPT_VERSION_SHA"
 
-# define functions here
 source functions.sh
-
-# run the sanity checks
 source sanity-checks.sh
 
-# sanity checks are all good. lets go!
-# create AUR directory where casualsnek script will be saved
 mkdir -p ~/AUR/waydroid &> /dev/null
 
-# perform git clone of waydroid_script and binder kernel module source
-echo Cloning casualsnek / aleasto waydroid_script repo and binder kernel module source repo.
-echo This can take a few minutes depending on the speed of the internet connection and if github is having issues.
-echo If the git clone is slow - cancel the script \(CTL-C\) and run it again.
+echo "正在克隆 casualsnek / aleasto waydroid_script 仓库和 binder 内核模块源码。"
+echo "这可能需要几分钟，取决于网速。"
+echo "如果进度过慢，请按 (CTL-C) 取消并重新运行脚本。"
 
 git clone --depth=1 $WAYDROID_SCRIPT $WAYDROID_SCRIPT_DIR &> /dev/null && \
 git clone $BINDER_AUR $BINDER_DIR &> /dev/null
 if [[ $? -ne 0 ]]; then
-	echo "AUR repo failed, falling back to GitHub mirror."
+	echo "AUR 仓库失败，正在切换至 GitHub 镜像。"
 	git clone --branch binder_linux-dkms --single-branch $BINDER_GITHUB $BINDER_DIR &> /dev/null
 fi
 
 if [[ $? -eq 0 ]]
 then
-	echo Repo has been successfully cloned! Proceed to the next step.
+	echo "仓库克隆成功！正在进入下一步。"
 else
-	echo Error cloning the repo!
+	echo "克隆仓库出错！"
 	rm -rf $WAYDROID_SCRIPT_DIR
 	cleanup_exit
 fi
 
-# unlock the readonly and initialize keyring using the devmode method
-echo Unlocking SteamOS and initializing keyring via steamos-devmode. This can take a while.
+echo "正在通过 steamos-devmode 解锁 SteamOS 并初始化密钥环。这可能需要一段时间。"
 echo "*** steamos-devmode ***" &> $LOGFILE
 echo -e "$current_password\n" | sudo -S steamos-devmode enable --no-prompt &>> $LOGFILE
 
 if [ $? -eq 0 ]
 then
-	echo pacman keyring has been initialized!
+	echo "pacman 密钥环已初始化！"
 else
-	echo Error initializing keyring!
+	echo "初始化密钥环出错！"
 	cleanup_exit
 fi
 
 if awk "BEGIN {exit ! ($STEAMOS_VERSION == $BASE_VERSION)}"
 then
 
-	# lets install the packages needed to build binder
-	echo Installing packages needed to build binder module from source. This can take a while.
+	echo "正在安装构建 binder 模块所需的软件包。这可能需要一段时间。"
 	echo "*** pacman install dependencies for binder ***" &>> $LOGFILE
 	echo -e "$current_password\n" | sudo -S pacman -S --noconfirm fakeroot debugedit dkms plymouth \
 	linux-neptune-$(uname -r | cut -d "-" -f5)-headers --overwrite "*" &>> $LOGFILE
 
 	if [ $? -eq 0 ]
 	then
-		echo No errors encountered installing packages needed to build binder module.
+		echo "安装 binder 构建依赖包完成，未发现错误。"
 	else
-		echo Errors were encountered.
-		echo Performing clean up. Good bye!
+		echo "安装过程中出现错误。"
+		echo "执行清理，再见！"
 		cleanup_exit
 		exit
 	fi
 
-	# finally lets build and install binder from source!
-	echo Building and installing binder module from source. This can take a while.
+	echo "正在从源码编译并安装 binder 模块。这可能需要一段时间。"
 	echo "*** build and install binder from source ***" &>> $LOGFILE
 	cd $BINDER_DIR && makepkg -f &>> $LOGFILE && \
 		echo -e "$current_password\n" | sudo -S pacman -U --noconfirm binder_linux-dkms*.zst &>> $LOGFILE && \
@@ -106,26 +89,25 @@ then
 
 	if [ $? -eq 0 ]	
 	then
-		echo No errors encountered building the binder module. Binder module has been loaded.
+		echo "编译 binder 模块完成，无错误。Binder 模块已加载。"
 	else
-		echo Errors were encountered.
-		echo Performing clean up. Good bye!
+		echo "编译过程中出现错误。"
+		echo "执行清理，再见！"
 		cleanup_exit
 		exit
 	fi
 
-	# ok lets install additional packages from pacman repo
+	echo "正在安装 pacman 仓库中的其他软件包。"
 	echo -e "$current_password\n" | sudo -S pacman -S --noconfirm wlroots cage wlr-randr &>> $LOGFILE
 
 	if [ $? -eq 0 ]
 	then
-		echo cage has been installed!
+		echo "cage 已安装！"
 	else
-		echo Error installing cage. Run the script again to install waydroid.
+		echo "安装 cage 出错。请再次运行脚本。"
 		cleanup_exit
 	fi
 
-	# waydroid binder configuration file
 	cd $WORKING_DIR
 	echo -e "$current_password\n" | sudo -S cp extras/waydroid_binder.conf /etc/modules-load.d/waydroid_binder.conf
 	echo -e "$current_password\n" | sudo -S cp extras/options-waydroid_binder.conf /etc/modprobe.d/waydroid_binder.conf
@@ -133,20 +115,19 @@ then
 elif awk "BEGIN {exit ! ($STEAMOS_VERSION > $BASE_VERSION)}"
 then
 
-	# ok lets install additional packages from pacman repo
+	echo "正在安装 pacman 仓库中的其他软件包。"
 	echo -e "$current_password\n" | sudo -S pacman -S --noconfirm cage wlr-randr &>> $LOGFILE
 
 	if [ $? -eq 0 ]
 	then
-		echo cage has been installed!
+		echo "cage 已安装！"
 	else
-		echo Error installing cage. Run the script again to install waydroid.
+		echo "安装 cage 出错。请再次运行脚本。"
 		cleanup_exit
 	fi
 fi
 
-# ok lets install precompiled waydroid
-echo Installing waydroid packages. This can take a while.
+echo "正在安装预编译的 Waydroid 软件包。这可能需要一段时间。"
 echo "*** pacman install waydroid packages ***" &>> $LOGFILE
 cd $WORKING_DIR
 echo -e "$current_password\n" | sudo -S pacman -U --noconfirm waydroid/libgbinder*.zst waydroid/libglibutil*.zst \
@@ -154,15 +135,13 @@ echo -e "$current_password\n" | sudo -S pacman -U --noconfirm waydroid/libgbinde
 
 if [ $? -eq 0 ]
 then
-	echo Waydroid has been installed!
+	echo "Waydroid 已安装！"
 	echo -e "$current_password\n" | sudo -S systemctl disable waydroid-container.service
 else
-	echo Error installing waydroid. Run the script again to install waydroid.
+	echo "安装 Waydroid 出错。请再次运行脚本。"
 	cleanup_exit
 fi
 
-# firewall config for waydroid0 interface to forward packets for internet to work
-# but first lets enable firewalld - some instance of SteamOS this is disabled / stopped?
 echo -e "$current_password\n" | sudo -S systemctl start firewalld
 echo -e "$current_password\n" | sudo -S firewall-cmd --zone=trusted --add-interface=waydroid0 &> /dev/null
 echo -e "$current_password\n" | sudo -S firewall-cmd --zone=trusted --add-port={53,67}/udp &> /dev/null
@@ -170,94 +149,80 @@ echo -e "$current_password\n" | sudo -S firewall-cmd --zone=trusted --add-forwar
 echo -e "$current_password\n" | sudo -S firewall-cmd --runtime-to-permanent &> /dev/null
 echo -e "$current_password\n" | sudo -S systemctl stop firewalld
 
-# lets install the custom config files
 mkdir ~/Android_Waydroid &> /dev/null
 
-# waydroid startup and shutdown scripts
 echo -e "$current_password\n" | sudo -S cp extras/waydroid-startup-scripts /usr/bin/waydroid-startup-scripts
 echo -e "$current_password\n" | sudo -S cp extras/waydroid-shutdown-scripts /usr/bin/waydroid-shutdown-scripts
 echo -e "$current_password\n" | sudo -S chmod +x /usr/bin/waydroid-startup-scripts /usr/bin/waydroid-shutdown-scripts
 
-# custom sudoers file do not ask for sudo for the custom waydroid scripts
 echo -e "$current_password\n" | sudo -S cp extras/zzzzzzzz-waydroid /etc/sudoers.d/zzzzzzzz-waydroid
 echo -e "$current_password\n" | sudo -S chown root:root /etc/sudoers.d/zzzzzzzz-waydroid
 
-# waydroid launcher, toolbox and updater
 cp extras/Android_Waydroid_Cage.sh extras/Waydroid-Toolbox.sh extras/Waydroid-Updater.sh ~/Android_Waydroid
 chmod +x ~/Android_Waydroid/*.sh
 
-# Dolphin File Manager extension for root access
 mkdir -p ~/.local/share/kio/servicemenus
 cp extras/open_as_root.desktop ~/.local/share/kio/servicemenus
 chmod +x ~/.local/share/kio/servicemenus/open_as_root.desktop
 
-# desktop shortcuts for toolbox + updater
 ln -s ~/Android_Waydroid/Waydroid-Toolbox.sh ~/Desktop/Waydroid-Toolbox &> /dev/null
 ln -s ~/Android_Waydroid/Waydroid-Updater.sh ~/Desktop/Waydroid-Updater &> /dev/null
 
-# lets check if this is a reinstall
 grep redfin /var/lib/waydroid/waydroid_base.prop &> /dev/null || grep PH7M_EU_5596 /var/lib/waydroid/waydroid_base.prop &> /dev/null
 if [ $? -eq 0 ]
 then
-	echo This seems to be a reinstall. Lets just make sure the symlinks are in place!
+	echo "检测到重新安装。确保软链接已就绪！"
 	if [ ! -d /etc/waydroid-extra ]
 	then
 		echo -e "$current_password\n" | sudo -S mkdir /etc/waydroid-extra
 		echo -e "$current_password\n" | sudo -S ln -s ~/waydroid/custom /etc/waydroid-extra/images &> /dev/null
 	fi
 
-	# all done lets re-enable the readonly
 	echo -e "$current_password\n" | sudo -S steamos-readonly enable
-	echo Waydroid has been successfully installed!
+	echo "Waydroid 已成功安装！"
 else
-	echo Downloading waydroid image from sourceforge.
-	echo This can take a few seconds to a few minutes depending on the internet connection and the speed of the sourceforge mirror.
-	echo Sometimes it connects to a slow sourceforge mirror and the downloads are slow -. This is beyond my control!
-	echo If the downloads are slow due to a slow sourceforge mirror - cancel the script \(CTL-C\) and run it again.
+	echo "正在从 sourceforge 下载 Waydroid 镜像。"
+	echo "这可能需要几秒钟到几分钟，具体取决于网络连接和镜像源速度。"
+	echo "如果下载速度过慢，请按 (CTL-C) 取消并重新运行脚本。"
 
-	# lets initialize waydroid
 	mkdir -p ~/waydroid/{images,custom,cache_http,host-permissions,lxc,overlay,overlay_rw,rootfs}
 	echo -e "$current_password\n" | sudo mkdir /var/lib/waydroid &> /dev/null
 	echo -e "$current_password\n" | sudo -S ln -s ~/waydroid/images /var/lib/waydroid/images &> /dev/null
 	echo -e "$current_password\n" | sudo -S ln -s ~/waydroid/cache_http /var/lib/waydroid/cache_http &> /dev/null
 
-	# place custom overlay files here - key layout, hosts, audio.rc etc etc
-	# copy fixed key layout for Steam Controller
 	echo -e "$current_password\n" | sudo -S mkdir -p /var/lib/waydroid/overlay/system/usr/keylayout
 	echo -e "$current_password\n" | sudo -S cp extras/Vendor_28de_Product_11ff.kl /var/lib/waydroid/overlay/system/usr/keylayout/
 
-	# copy custom audio.rc patch to lower the audio latency
 	echo -e "$current_password\n" | sudo -S mkdir -p /var/lib/waydroid/overlay/system/etc/init
 	echo -e "$current_password\n" | sudo -S cp extras/audio.rc /var/lib/waydroid/overlay/system/etc/init/
 
-	# download custom hosts file from StevenBlack to block ads (adware + malware + fakenews + gambling + pr0n)
 	echo -e "$current_password\n" | sudo -S wget https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/fakenews-gambling-porn/hosts \
 		       -O /var/lib/waydroid/overlay/system/etc/hosts
 
 	Choice=$(zenity --width 1040 --height 320 --list --radiolist --multiple \
-		--title "SteamOS Waydroid Installer  - https://github.com/ryanrudolfoba/SteamOS-Waydroid-Installer"\
-		--column "Select One" \
-		--column "Option" \
-		--column="Description - Read this carefully!"\
-		TRUE A13_GAPPS "Download official Android 13 image with Google Play Store."\
-		FALSE A13_NO_GAPPS "Download official Android 13 image without Google Play Store."\
-		FALSE TV13_GAPPS "Download unofficial Android 13 TV image with Google Play Store - thanks SupeChicken666 for the image!" \
-		FALSE EXIT "***** Exit this script *****")
+		--title "SteamOS Waydroid 安装程序 - https://github.com/ryanrudolfoba/SteamOS-Waydroid-Installer"\
+		--column "选择一项" \
+		--column "选项" \
+		--column="描述 - 请仔细阅读！"\
+		TRUE A13_GAPPS "下载官方 Android 13 镜像（含 Google Play 商店）。"\
+		FALSE A13_NO_GAPPS "下载官方 Android 13 镜像（不含 Google Play 商店）。"\
+		FALSE TV13_GAPPS "下载非官方 Android 13 TV 镜像（含 Google Play 商店）- 感谢 SupeChicken666 提供镜像！" \
+		FALSE EXIT "***** 退出此脚本 *****")
 
 		if [ $? -eq 1 ] || [ "$Choice" == "EXIT" ]
 		then
-			echo User pressed CANCEL / EXIT. Goodbye!
+			echo "用户按下取消 / 退出。再见！"
 			cleanup_exit
 
 		elif [ "$Choice" == "A13_GAPPS" ]
 		then
-			echo Initializing Waydroid.
+			echo "正在初始化 Waydroid。"
 			echo -e "$current_password\n" | sudo -S waydroid init -s GAPPS
 			check_waydroid_init
 
 		elif [ "$Choice" == "A13_NO_GAPPS" ]
 		then
-			echo Initializing Waydroid.
+			echo "正在初始化 Waydroid。"
 			echo -e "$current_password\n" | sudo -S waydroid init
 			check_waydroid_init
 
@@ -266,23 +231,21 @@ else
 			prepare_custom_image_location
 			download_image $ANDROID13_TV_IMG $ANDROID13_TV_IMG_HASH ~/waydroid/custom/android13tv "Android 13 TV"
 
-			echo Applying fix for Leanback Keyboard.
+			echo "正在应用 Leanback 键盘修复。"
 			echo -e "$current_password\n" | sudo -S cp extras/ATV-Generic.kl /var/lib/waydroid/overlay/system/usr/keylayout/Generic.kl
 
-			echo Initializing Waydroid.
+			echo "正在初始化 Waydroid。"
  			echo -e "$current_password\n" | sudo -S waydroid init
 			check_waydroid_init
 			
 		fi
 	
-	# run casualsnek / aleasto waydroid_script
-	echo Install libndk, widevine and fingerprint spoof.
+	echo "安装 libndk、widevine 和指纹伪装。"
 	install_android_extras
 
-	# change GPU rendering to use minigbm_gbm_mesa
 	echo -e $PASSWORD\n | sudo -S sed -i "s/ro.hardware.gralloc=.*/ro.hardware.gralloc=minigbm_gbm_mesa/g" /var/lib/waydroid/waydroid_base.prop
 
-	echo "Adding shortcuts to Game Mode. Please wait..."
+	echo "正在添加快捷方式到游戏模式。请稍候..."
 
 	logged_in_user=$(whoami)
 	logged_in_home=$(eval echo "~$logged_in_user")
@@ -292,7 +255,7 @@ else
 	if [ -f "$launcher_script" ]; then
 		chmod +x "$launcher_script"
 	else
-		echo "Error: Launcher script '$launcher_script' not found."
+		echo "错误：未找到启动脚本 '$launcher_script'。"
 	fi
 
 	TMP_DESKTOP="/tmp/waydroid-temp.desktop"
@@ -310,22 +273,18 @@ EOF
 	steamos-add-to-steam "$TMP_DESKTOP"
 	sleep 3
 	rm -f "$TMP_DESKTOP"
-	echo Waydroid shortcut has been added to Game Mode.
+	echo "Waydroid 快捷方式已添加到游戏模式。"
 	
-	# create icon for the Waydroid shortcut
 	python3 extras/icon.py
 	
-	# add steamos-nested-desktop to Game Mode. This can be used when doing Waydroid maintenance.
 	steamos-add-to-steam /usr/bin/steamos-nested-desktop  &> /dev/null
 	sleep 3
-	echo steamos-nested-desktop shortcut has been added to Game Mode.
+	echo "steamos-nested-desktop 快捷方式已添加到游戏模式。"
 
-	# all done lets re-enable the readonly
 	echo -e "$current_password\n" | sudo -S steamos-readonly enable
-	echo Waydroid has been successfully installed!
+	echo "Waydroid 已成功安装！"
 fi
 
-# all done! Display dialog box for Gaming Mode
-if zenity --question --text="Do you Want to Return to Gaming Mode?"; then
+if zenity --question --text="是否要返回游戏模式？"; then
 	qdbus org.kde.Shutdown /Shutdown org.kde.Shutdown.logout
 fi
