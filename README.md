@@ -15,7 +15,7 @@ cd steamos-waydroid-installer
 chmod +x steamos-waydroid-installer.sh
 chmod +x functions.sh
 chmod +x sanity-checks.sh
-sudo ./steamos-waydroid-installer.sh
+./steamos-waydroid-installer.sh
 ```
 
 **安装操作及过程与原版相同，安装默认libndk转译层，桌面提供工具箱，可在工具箱内进行转译层切换**
