@@ -87,21 +87,11 @@ else
 	exit
 fi
 
+# 仅检测状态并记录，不执行停止操作
 systemctl is-active --quiet plugin_loader.service
-if [ $? -eq 0 ]
-then
-	echo "检测到 Decky Loader！这可能会对 Waydroid 安装脚本产生影响！"
-	echo "正在暂时禁用 Decky Loader 插件服务。"
-	echo -e "$current_password\n" | sudo -S systemctl stop plugin_loader.service
+DECKY_WAS_RUNNING=$?
 
-	if [ $? -eq 0 ]
-	then
-		echo "Decky Loader 插件服务已成功禁用。"
-		echo "待 Waydroid 安装完成后，该服务将重新启用。"
-	  	echo "您也可以通过重启 Steam Deck 来重新激活 Decky Loader。"
-	else
-		echo "停止 Decky Loader 插件服务时出错。"
-		echo "立即退出。"
-		exit
-	fi
+if [ $DECKY_WAS_RUNNING -eq 0 ]
+then
+	echo "检测到 Decky Loader 正在运行。为了下载顺利，脚本将在稍后安装阶段再禁用它。"
 fi
