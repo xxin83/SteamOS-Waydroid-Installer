@@ -241,6 +241,7 @@ else
 		fi
 	
 	echo "安装 libndk、widevine 和指纹伪装。"
+	# 修改：此函数内部会处理下载并在完成后执行停止 Decky
 	install_android_extras
 
 	echo -e $PASSWORD\n | sudo -S sed -i "s/ro.hardware.gralloc=.*/ro.hardware.gralloc=minigbm_gbm_mesa/g" /var/lib/waydroid/waydroid_base.prop
@@ -280,6 +281,13 @@ EOF
 	steamos-add-to-steam /usr/bin/steamos-nested-desktop  &> /dev/null
 	sleep 3
 	echo "steamos-nested-desktop 快捷方式已添加到游戏模式。"
+
+	# 修改：安装结束，恢复服务
+	if [ "$DECKY_WAS_RUNNING" == "0" ]
+	then
+		echo "安装完成，正在重新启用 Decky Loader。"
+		echo -e "$current_password\n" | sudo -S systemctl start plugin_loader.service
+	fi
 
 	echo -e "$current_password\n" | sudo -S steamos-readonly enable
 	echo "Waydroid 已成功安装！"
