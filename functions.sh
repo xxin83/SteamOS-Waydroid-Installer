@@ -17,7 +17,8 @@ cleanup_exit () {
 	echo -e "$current_password\n" | sudo -S rm -rf ~/Android_Waydroid &> /dev/null
 	echo -e "$current_password\n" | sudo -S steamos-readonly enable &> /dev/null
 	
-	if [ -f $PLUGIN_LOADER ]
+	# 修改：使用变量判断是否需要恢复 Decky
+	if [ "$DECKY_WAS_RUNNING" == "0" ]
 	then
 		echo "正在重新启用 Decky Loader 插件服务。"
 		echo -e "$current_password\n" | sudo -S systemctl start plugin_loader.service
@@ -54,12 +55,20 @@ download_image () {
 }
 
 install_android_extras () {
+	# 步骤1：先执行需要联网的任务
 	python3 -m venv $WAYDROID_SCRIPT_DIR/venv
 	$WAYDROID_SCRIPT_DIR/venv/bin/pip install -r $WAYDROID_SCRIPT_DIR/requirements.txt &> /dev/null
 
 	if [ "$Choice" == "A13_NO_GAPPS" ] || [ "$Choice" == "A13_GAPPS" ]
 	then
 		echo -e "$current_password\n" | sudo -S $WAYDROID_SCRIPT_DIR/venv/bin/python3 $WAYDROID_SCRIPT_DIR/main.py -a13 install {libndk,widevine}
+	fi
+
+	# 步骤2：联网任务结束，现在禁用 Decky
+	if [ "$DECKY_WAS_RUNNING" == "0" ]
+	then
+		echo "正在暂时禁用 Decky Loader 插件服务以完成最后配置。"
+		echo -e "$current_password\n" | sudo -S systemctl stop plugin_loader.service
 	fi
 
 	echo "casualsnek / aleasto waydroid_script 执行完毕。"
